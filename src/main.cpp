@@ -55,6 +55,7 @@ int main(int argcp, char **argv)
 
   // re-load last opened scenario
   FILE *f = fopen("../config/LastScenario.txt", "r");
+  //FILE *f = fopen("../config/testQuadControlParams.txt", "r");
   if (f)
   {
     char buf[100]; buf[99] = 0;
