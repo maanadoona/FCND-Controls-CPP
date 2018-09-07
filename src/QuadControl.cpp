@@ -70,10 +70,10 @@ VehicleCommand QuadControl::GenerateMotorCommands(float collThrustCmd, V3F momen
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
 
-  cmd.desiredThrustsN[0] = mass * 9.81f / 4.f; // front left
-  cmd.desiredThrustsN[1] = mass * 9.81f / 4.f; // front right
-  cmd.desiredThrustsN[2] = mass * 9.81f / 4.f; // rear left
-  cmd.desiredThrustsN[3] = mass * 9.81f / 4.f; // rear right
+  //cmd.desiredThrustsN[0] = mass * 9.81f / 4.f; // front left
+  //cmd.desiredThrustsN[1] = mass * 9.81f / 4.f; // front right
+  //cmd.desiredThrustsN[2] = mass * 9.81f / 4.f; // rear left
+  //cmd.desiredThrustsN[3] = mass * 9.81f / 4.f; // rear right
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
@@ -97,9 +97,23 @@ V3F QuadControl::BodyRateControl(V3F pqrCmd, V3F pqr)
   V3F momentCmd;
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
-
-  
-
+    // p_c = pqrCmd.x
+    // q_c = pqrCmd.y
+    // r_c = pqrCmd.z
+    // p_actual = pqr.x
+    // q_actual = pqr.y
+    // r_actual = pqr.z
+/*
+    p_err = p_c - p_actual
+    q_err = q_c - q_actual
+    r_err = r_c - r_actual
+    u_bar_p = self.k_p_p * p_err
+    u_bar_q = self.k_p_q * q_err
+    u_bar_r = self.k_p_r * r_err
+*/
+    momentCmd.x = kpPQR.x * (pqrCmd.x - pqr.x);
+    momentCmd.y = kpPQR.y * (pqrCmd.y - pqr.y);
+    momentCmd.z = kpPQR.z * (pqrCmd.z - pqr.z);
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
   return momentCmd;
@@ -128,9 +142,20 @@ V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, floa
   Mat3x3F R = attitude.RotationMatrix_IwrtB();
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
+    // b_x_c_target = accelCmd.x
+    // b_y_c_target = accelCmd.y
+    // rot_mat = R( , )
+/*
+    b_dot_x_c = self.k_p_roll*(b_x_c_target - rot_mat[0, 2])
+    b_dot_y_c = self.k_p_pitch*(b_y_c_target - rot_mat[1, 2])
+    p_c = (rot_mat[1, 0]*b_dot_x_c - rot_mat[0, 0]*b_dot_y_c)/rot_mat[2, 2]
+    q_c = (rot_mat[1, 1]*b_dot_x_c - rot_mat[0, 1]*b_dot_y_c)/rot_mat[2, 2]
+*/
+    float b_dot_x_c = kpBank * (accelCmd.x - R(0, 2));
+    float b_dot_y_c = kpBank * (accelCmd.y - R(1, 2));
 
-
-
+    pqrCmd.x = (R(1, 0) * b_dot_x_c - R(0, 0) * b_dot_y_c) / R(2, 2);
+    pqrCmd.y = (R(1, 1) * b_dot_x_c - R(0, 1) * b_dot_y_c) / R(2, 2);
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
   return pqrCmd;
@@ -160,9 +185,20 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
   float thrust = 0;
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
+  // z_target = posZCmd
+  // z_dot_target = velZCmd
+  // z_dot_dot_target = accelZCmd
+  // z_actual = posZ
+  // z_dot_actual = velZ
+  // rot_mat = R(2, 2)
+  // z_k_p = kpPosZ
+  // z_k_d = kpVelZ
+  // g = 9.81f
 
-
-
+  //u_bar1 = self.z_k_p * (z_target - z_actual) + self.z_k_d * (z_dot_target-z_dot_actual) + z_dot_dot_target
+  //c = (u_bar1 - self.g) / rot_mat[2,2]
+  float u_bar1 = kpPosZ * (posZCmd - posZ) + kpVelZ * (velZCmd - velZ) + accelZCmd;
+  thrust = (u_bar1 - 9.81f) / R(2,2);
   /////////////////////////////// END STUDENT CODE ////////////////////////////
   
   return thrust;
@@ -198,9 +234,31 @@ V3F QuadControl::LateralPositionControl(V3F posCmd, V3F velCmd, V3F pos, V3F vel
   V3F accelCmd = accelCmdFF;
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
+    // x_target = posCmd.x
+    // x_dot_target = velCmd.x
+    // x_dot_dot_target = accelCmdFF.x
+    // x_actual = pos.x
+    // x_dot_actual = vel.x
+    // y_target = posCmd.y
+    // y_dot_target = velCmd.y
+    // y_dot_dot_target = accelCmdFF.y
+    // y_actual = pos.y
+    // y_dot_actual = vel.y
+  /*
+  termx1 = self.x_k_p * (x_target - x_actual)
+  termx2 = self.x_k_d * (x_dot_target - x_dot_actual)
+  x_dot_dot_cmd = termx1 + termx2 + x_dot_dot_target
+  termy1 = self.y_k_p * (y_target - y_actual)
+  termy2 = self.y_k_d * (y_dot_target - y_dot_actual)
+  y_dot_dot_cmd = termy1 + termy2 + y_dot_dot_target
+  */
+    float termx1 = kpPosXY * (posCmd.x - pos.x);
+    float termx2 = kpPosXY * (velCmd.x - vel.x);
+    accelCmd.x = termx1 + termx2 + accelCmdFF.x;
 
-  
-
+    float termy1 = kpPosXY * (posCmd.y - pos.y);
+    float termy2 = kpPosXY * (velCmd.y - vel.y);
+    accelCmd.y = termy1 + termy2 + accelCmdFF.y;
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
   return accelCmd;
@@ -221,12 +279,15 @@ float QuadControl::YawControl(float yawCmd, float yaw)
 
   float yawRateCmd=0;
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
+    // psi_target = yawCmd
+    // psi_actual = yaw
+    // k_p_yaw = kpYaw
 
-
+    // r_c = self.k_p_yaw * (psi_target - psi_actual)
+    yawRateCmd = kpYaw * (yawCmd - yaw);
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
   return yawRateCmd;
-
 }
 
 VehicleCommand QuadControl::RunControl(float dt, float simTime)
