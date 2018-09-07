@@ -183,7 +183,6 @@ V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, floa
 
     pqrCmd.x = (R(1, 0) * b_dot_x_c - R(0, 0) * b_dot_y_c) / R(2, 2);
     pqrCmd.y = (R(1, 1) * b_dot_x_c - R(0, 1) * b_dot_y_c) / R(2, 2);
-    pqrCmd.z = 0;
   /////////////////////////////// END STUDENT CODE ////////////////////////////    
 
   return pqrCmd;
@@ -225,8 +224,13 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
 
   //u_bar1 = self.z_k_p * (z_target - z_actual) + self.z_k_d * (z_dot_target-z_dot_actual) + z_dot_dot_target
   //c = (u_bar1 - self.g) / rot_mat[2,2]
-  integratedAltitudeError += (posZCmd - posZ) * dt;
-  float u_bar1 = kpPosZ * (posZCmd - posZ) + kpVelZ * (velZCmd - velZ) + KiPosZ * (integratedAltitudeError) + accelZCmd;
+  float z_err = posZCmd - posZ;
+  float z_dot_err = velZCmd - velZ;
+  integratedAltitudeError += z_err * dt;
+
+  float u_bar1 = kpPosZ * z_err + kpVelZ * z_dot_err + KiPosZ * (integratedAltitudeError) + accelZCmd;
+  //float u_bar1 = kpPosZ * z_err + kpVelZ * z_dot_err + KiPosZ * (integratedAltitudeError);
+  u_bar1 = CONSTRAIN(u_bar1, -maxAscentRate / dt, maxDescentRate / dt);
   thrust = -mass * (u_bar1 - 9.81f) / R(2,2);
   /////////////////////////////// END STUDENT CODE ////////////////////////////
   
@@ -281,13 +285,17 @@ V3F QuadControl::LateralPositionControl(V3F posCmd, V3F velCmd, V3F pos, V3F vel
   termy2 = self.y_k_d * (y_dot_target - y_dot_actual)
   y_dot_dot_cmd = termy1 + termy2 + y_dot_dot_target
   */
+    velCmd.x = CONSTRAIN(velCmd.x, -maxSpeedXY, maxSpeedXY);
+    velCmd.y = CONSTRAIN(velCmd.y, -maxSpeedXY, maxSpeedXY);
+
     float termx1 = kpPosXY * (posCmd.x - pos.x);
     float termx2 = kpPosXY * (velCmd.x - vel.x);
-    accelCmd.x = termx1 + termx2 + accelCmdFF.x;
-
+    accelCmd.x = termx1 + termx2 + accelCmd.x;
+    accelCmd.x = CONSTRAIN(accelCmd.x, -maxAccelXY, maxAccelXY);
     float termy1 = kpPosXY * (posCmd.y - pos.y);
     float termy2 = kpPosXY * (velCmd.y - vel.y);
-    accelCmd.y = termy1 + termy2 + accelCmdFF.y;
+    accelCmd.y = termy1 + termy2 + accelCmd.y;
+    accelCmd.y = CONSTRAIN(accelCmd.y, -maxAccelXY, maxAccelXY);
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
   return accelCmd;
@@ -313,7 +321,7 @@ float QuadControl::YawControl(float yawCmd, float yaw)
     // k_p_yaw = kpYaw
 
     // r_c = self.k_p_yaw * (psi_target - psi_actual)
-
+/*
   float yaw_pi = 0;
   if(yawCmd > 0)
   {
@@ -332,7 +340,8 @@ float QuadControl::YawControl(float yawCmd, float yaw)
   {
       err += 2*F_PI;
   }
-
+*/
+    float err = yawCmd - yaw;
     yawRateCmd = kpYaw * err;
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
