@@ -4,12 +4,12 @@
 
 In the real world the flight controller is usually implemented in C or C++. So in this project you will implement your controller in C++. The code you write here can eventually be transferred to a real drone!
 
-.[image1]: ./result/1.gif
-.[image2]: ./result/2.gif
-.[image3]: ./result/3.gif
-.[image4]: ./result/4.gif
-.[image5]: ./result/5.gif
-.[image6]: ./result/6.gif
+[image1]: ./result/1.gif
+[image2]: ./result/2.gif
+[image3]: ./result/3.gif
+[image4]: ./result/4.gif
+[image5]: ./result/5.gif
+[image6]: ./result/6.gif
 
 
 ## 1. C++ Implementation ##
