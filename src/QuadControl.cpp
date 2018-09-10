@@ -185,12 +185,17 @@ V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, floa
 
   if ( collThrustCmd > 0 )
   {
-    float c = -collThrustCmd / mass;
-    float b_dot_x_c = kpBank * (accelCmd.x/c - R(0, 2));
-    float b_dot_y_c = kpBank * (accelCmd.y/c - R(1, 2));
+      float c = - collThrustCmd / mass;
+      float b_x_cmd = CONSTRAIN(accelCmd.x / c, -maxTiltAngle, maxTiltAngle);
+      float b_x_err = b_x_cmd - R(0,2);
+      float b_x_p_term = kpBank * b_x_err;
 
-    pqrCmd.x = (R(1, 0) * b_dot_x_c - R(0, 0) * b_dot_y_c) / R(2, 2);
-    pqrCmd.y = (R(1, 1) * b_dot_x_c - R(0, 1) * b_dot_y_c) / R(2, 2);
+      float b_y_cmd = CONSTRAIN(accelCmd.y / c, -maxTiltAngle, maxTiltAngle);
+      float b_y_err = b_y_cmd - R(1,2);
+      float b_y_p_term = kpBank * b_y_err;
+
+      pqrCmd.x = (R(1,0) * b_x_p_term - R(0,0) * b_y_p_term) / R(2,2);
+      pqrCmd.y = (R(1,1) * b_x_p_term - R(0,1) * b_y_p_term) / R(2,2);
   }
   /////////////////////////////// END STUDENT CODE ////////////////////////////    
 
@@ -240,6 +245,12 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
   float u_bar1 = kpPosZ * z_err + kpVelZ * z_dot_err + KiPosZ * (integratedAltitudeError) + accelZCmd;
   //float u_bar1 = kpPosZ * z_err + kpVelZ * z_dot_err + KiPosZ * (integratedAltitudeError);
   thrust = -mass * (u_bar1 - 9.81f) / R(2,2);
+
+  if(thrust > 10)
+      thrust = 10;
+  else if (thrust < 0.0)
+      thrust = 0.0;
+
   //thrust = -mass * CONSTRAIN(thrust, -maxAscentRate / dt, maxDescentRate / dt);
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
@@ -329,14 +340,21 @@ float QuadControl::YawControl(float yawCmd, float yaw)
 
   float yawRateCmd=0;
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
-    // psi_target = yawCmd
-    // psi_actual = yaw
-    // k_p_yaw = kpYaw
-
-    // r_c = self.k_p_yaw * (psi_target - psi_actual)
-
-    float err = yawCmd - yaw;
-    yawRateCmd = kpYaw * err;
+  float yaw_cmd_2_pi = 0;
+  if ( yawCmd > 0 ) {
+    yaw_cmd_2_pi = fmodf(yawCmd, 2 * F_PI);
+  } else {
+    yaw_cmd_2_pi = -fmodf(-yawCmd, 2 * F_PI);
+  }
+  float err = yaw_cmd_2_pi - yaw;
+  if ( err > F_PI ) {
+    err -= 2 * F_PI;
+  } if ( err < -F_PI ) {
+    err += 2 * F_PI;
+  }
+  yawRateCmd = kpYaw * err;
+    //float err = yawCmd - yaw;
+    //yawRateCmd = kpYaw * err;
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
   return yawRateCmd;
